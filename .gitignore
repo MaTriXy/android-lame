@@ -11,3 +11,4 @@ market/*
 local.properties
 liblame/build
 build
+.gradle
