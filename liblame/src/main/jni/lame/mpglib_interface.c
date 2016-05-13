@@ -103,6 +103,7 @@ decode1_headersB_clipchoice(PMPSTR pmp, unsigned char *buffer, int len,
     mp3data->header_parsed = 0;
 
     ret = (*decodeMP3_ptr) (pmp, buffer, len, p, (int) psize, &processed_bytes);
+
     /* three cases:  
      * 1. headers parsed, but data not complete
      *       pmp->header_parsed==1 
@@ -138,8 +139,6 @@ decode1_headersB_clipchoice(PMPSTR pmp, unsigned char *buffer, int len,
                 (1.e3 * mp3data->framesize) + 0.5;
         else
             mp3data->bitrate = tabsel_123[pmp->fr.lsf][pmp->fr.lay - 1][pmp->fr.bitrate_index];
-
-
 
         if (pmp->num_frames > 0) {
             /* Xing VBR header found and num_frames was set */

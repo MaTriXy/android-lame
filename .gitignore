@@ -9,3 +9,5 @@ market/*
 *.ipr
 *.iml
 local.properties
+liblame/build
+build

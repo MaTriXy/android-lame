@@ -33,9 +33,9 @@
 #include "interface.h"
 #include "tabinit.h"
 #include "layer3.h"
-#include "lame.h"
-#include "machine.h"
-#include "VbrTag.h"
+#include "../lame.h"
+#include "../machine.h"
+#include "../VbrTag.h"
 #include "decode_i386.h"
 
 #include "layer1.h"
@@ -45,7 +45,9 @@
 #include <dmalloc.h>
 #endif
 
-/* #define HIP_DEBUG */
+#include <android/log.h>
+#define LOGD(...)  //__android_log_print(ANDROID_LOG_DEBUG, "Debug", __VA_ARGS__)
+//#define HIP_DEBUG
 
 int
 InitMP3(PMPSTR mp)
@@ -104,7 +106,7 @@ addbuf(PMPSTR mp, unsigned char *buf, int size)
 
     nbuf = (struct buf *) malloc(sizeof(struct buf));
     if (!nbuf) {
-        fprintf(stderr, "hip: addbuf() Out of memory!\n");
+		LOGD("hip: addbuf() Out of memory!\n");
         return NULL;
     }
     nbuf->pnt = (unsigned char *) malloc((size_t) size);
@@ -160,7 +162,7 @@ read_buf_byte(PMPSTR mp)
     while (pos >= mp->tail->size) {
         remove_buf(mp);
         if (!mp->tail) {
-            fprintf(stderr, "hip: Fatal error! tried to read past mp buffer\n");
+			LOGD("hip: Fatal error! tried to read past mp buffer\n");
             exit(1);
         }
         pos = mp->tail->pos;
@@ -422,7 +424,7 @@ decodeMP3_clipchoice(PMPSTR mp, unsigned char *in, int isize, char *out, int *do
             else {
                 /* not enough data to look for Xing header */
 #ifdef HIP_DEBUG
-                fprintf(stderr, "hip: not enough data to look for Xing header\n");
+				LOGD("hip: not enough data to look for Xing header\n");
 #endif
                 return MP3_NEED_MORE;
             }
@@ -438,7 +440,7 @@ decodeMP3_clipchoice(PMPSTR mp, unsigned char *in, int isize, char *out, int *do
                  * is used by a non zero main_data_begin for the next
                  * frame, but otherwise dont decode Xing header */
 #ifdef HIP_DEBUG
-                fprintf(stderr, "hip: found xing header, skipping %i bytes\n", vbrbytes + bytes);
+				LOGD("hip: found xing header, skipping %i bytes\n", vbrbytes + bytes);
 #endif
                 for (i = 0; i < vbrbytes + bytes; ++i)
                     read_buf_byte(mp);
@@ -466,7 +468,7 @@ decodeMP3_clipchoice(PMPSTR mp, unsigned char *in, int isize, char *out, int *do
              * to make sure we do not overflow buffer
              */
             int     size;
-            fprintf(stderr, "hip: bitstream problem, resyncing skipping %d bytes...\n", bytes);
+			LOGD("hip: bitstream problem, resyncing skipping %d bytes...\n", bytes);
             mp->old_free_format = 0;
 #if 1
             /* FIXME: correct ??? */
@@ -477,8 +479,7 @@ decodeMP3_clipchoice(PMPSTR mp, unsigned char *in, int isize, char *out, int *do
 
             if (size > MAXFRAMESIZE) {
                 /* wordpointer buffer is trashed.  probably cant recover, but try anyway */
-                fprintf(stderr, "hip: wordpointer trashed.  size=%i (%i)  bytes=%i \n",
-                        size, MAXFRAMESIZE, bytes);
+				LOGD("hip: wordpointer trashed.  size=%i (%i)  bytes=%i \n", size, MAXFRAMESIZE, bytes);
                 size = 0;
                 mp->wordpointer = mp->bsspace[mp->bsnum] + 512;
             }
@@ -516,7 +517,7 @@ decodeMP3_clipchoice(PMPSTR mp, unsigned char *in, int isize, char *out, int *do
         /* for very first header, never parse rest of data */
         if (mp->fsizeold == -1) {
 #ifdef HIP_DEBUG
-            fprintf(stderr, "hip: not parsing the rest of the data of the first header\n");
+			LOGD("hip: not parsing the rest of the data of the first header\n");
 #endif
             return MP3_NEED_MORE;
         }
@@ -544,8 +545,7 @@ decodeMP3_clipchoice(PMPSTR mp, unsigned char *in, int isize, char *out, int *do
             mp->dsize = (bits + 7) / 8;
 
 #ifdef HIP_DEBUG
-            fprintf(stderr,
-                    "hip: %d bits needed to parse layer III frame, number of bytes to read before decoding dsize = %d\n",
+			LOGD("hip: %d bits needed to parse layer III frame, number of bytes to read before decoding dsize = %d\n",
                     bits, mp->dsize);
 #endif
 
@@ -599,7 +599,7 @@ decodeMP3_clipchoice(PMPSTR mp, unsigned char *in, int isize, char *out, int *do
             do_layer3(mp, (unsigned char *) out, done, synth_1to1_mono_ptr, synth_1to1_ptr);
             break;
         default:
-            fprintf(stderr, "hip: invalid layer %d\n", mp->fr.lay);
+			LOGD("hip: invalid layer %d\n", mp->fr.lay);
         }
 
         mp->wordpointer = mp->bsspace[mp->bsnum] + 512 + mp->ssize + mp->dsize;
@@ -652,7 +652,7 @@ decodeMP3_clipchoice(PMPSTR mp, unsigned char *in, int isize, char *out, int *do
 
         size = (int) (mp->wordpointer - (mp->bsspace[mp->bsnum] + 512));
         if (size > MAXFRAMESIZE) {
-            fprintf(stderr, "hip: fatal error.  MAXFRAMESIZE not large enough.\n");
+			LOGD("hip: fatal error.  MAXFRAMESIZE not large enough.\n");
         }
 
     }
@@ -672,7 +672,7 @@ int
 decodeMP3(PMPSTR mp, unsigned char *in, int isize, char *out, int osize, int *done)
 {
     if (osize < 4608) {
-        fprintf(stderr, "hip: Insufficient memory for decoding buffer %d\n", osize);
+		LOGD("hip: Insufficient memory for decoding buffer %d\n", osize);
         return MP3_ERR;
     }
 
@@ -685,7 +685,7 @@ decodeMP3_unclipped(PMPSTR mp, unsigned char *in, int isize, char *out, int osiz
 {
     /* we forbid input with more than 1152 samples per channel for output in unclipped mode */
     if (osize < (int) (1152 * 2 * sizeof(real))) {
-        fprintf(stderr, "hip: out space too small for unclipped mode\n");
+		LOGD("hip: out space too small for unclipped mode\n");
         return MP3_ERR;
     }
 
